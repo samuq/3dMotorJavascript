@@ -380,6 +380,7 @@
     this.CreatePlane = CreatePlane;
     this.CreatePlaneGrid = CreatePlaneGrid;
     this.LoadObj = LoadObj;
+    this.CreateObj = CreateObj;
     this.Createcube = Createcube;
     this.CreateSphere = CreateSphere;
     this.edgesAndFaces = edgesAndFaces;
@@ -388,11 +389,44 @@
     this.calculateNormals = calculateNormals;
     this.calculateFaceNormals = calculateFaceNormals;
     this.sphereMap = sphereMap;
-    function LoadObj() {
-      let contents = readSingleFile();
-      console.log(contents);
+    function LoadObj(e) {
+      readSingleFile(e);
+      //console.log(contents);
     }
     //this.cubeMap=cubeMap;
+    function CreateObj(text) {
+      let vertexData = text.split("v");
+      vertexData.shift();
+      let faceData = vertexData.pop();
+      faceData = faceData.split("f");
+      let midData = faceData.shift();
+      console.log(midData);
+      vertexData.push(midData);
+      for (let i = 0; i < vertexData.length; i++) {
+        const vertexArray = vertexData[i].trim().split(" ");
+        const newVertex = new Vector3();
+        newVertex.initialize(
+          Number(vertexArray[0]),
+          Number(vertexArray[1]),
+          Number(vertexArray[2])
+        );
+        this.vertices.push(newVertex);
+      }
+      //console.log(this.vertices);
+      for (let i = 0; i < faceData.length; i++) {
+        const faceArray = faceData[i].trim().split(" ");
+        //console.log(faceArray);
+        const newFace = new Face();
+
+        newFace.initialize(
+          this.vertices[Number(faceArray[0]) - 1].vector3,
+          this.vertices[Number(faceArray[1]) - 1].vector3,
+          this.vertices[Number(faceArray[2]) - 1].vector3
+        );
+        this.faces.push(newFace);
+      }
+      this.calculateFaceNormals();
+    }
     function CreatePlane(x, y, z) {
       for (var i = 0; i < 2; i++) {
         for (var j = 0; j < 2; j++) {
@@ -794,6 +828,9 @@
     }
   }
   function readSingleFile(e) {
+    if (!e || !e.target) {
+      return;
+    }
     var file = e.target.files[0];
     if (!file) {
       return;
@@ -801,6 +838,8 @@
     var reader = new FileReader();
     reader.onload = function (e) {
       var contents = e.target.result;
+      //console.log(contents);
+      obj.CreateObj(contents);
       return contents;
     };
     reader.readAsText(file);
@@ -813,7 +852,7 @@
     return normal1;
   }
 
-  function startscene() {
+  function startscene(e) {
     console.log("start!");
     var scene1 = new scene();
     canvas = document.getElementById("view");
@@ -821,11 +860,10 @@
     console.log(width);
     height = canvas.height;
     var ratio = height / width;
-    initializeMainCamera(0, 0, -14, "z", "x", 90, ratio);
-    document
-      .getElementById("file-input")
-      .addEventListener("change", this.obj.LoadObj(), false);
-    this.obj = new mesh();
+    initializeMainCamera(0, 0, -100, "z", "x", 90, ratio);
+
+    obj = new mesh();
+    obj.LoadObj(e);
     var cube = new mesh();
     cube.Createcube(1, 1, 1);
     //scene1.add(cube);
@@ -846,9 +884,9 @@
     transform.initialize(pos, rot, scale);
     var color = new Vector3();
     color.initialize(175, 205, 255);
-    var light1 = new light(10, transform, color, 0.5, 1);
+    var light1 = new light(150, transform, color, 0.5, 1);
     scene1.addLight(light1);
-
+    scene1.add(obj);
     //scene1.add(sphere);//document.write(scene1.lights[0]);
     rotateObjects(scene1);
     var myvar = setInterval(function () {
@@ -1134,12 +1172,15 @@
 
   function rotateObjects(scene1) {
     axis1 = new Vector3();
-    axis1.initialize(1, 1, 1);
+    axis1.initialize(1, 0, 0);
     angle = 2;
 
     for (var i = 0; i < scene1.objects.length; i++) {
+      //console.log(scene1.objects[i]);
       for (var j = 0; j < scene1.objects[i].faces.length; j++) {
+        //console.log(scene1.objects[i].faces[j], i, j);
         for (var k = 0; k < scene1.objects[i].faces[j].face.length; k++) {
+          //console.log(scene1.objects[i].faces[j].face[k], i, j, k);
           scene1.objects[i].faces[j].face[k] = applyRotation(
             scene1.objects[i].faces[j].face[k],
             axis1,
@@ -2278,8 +2319,10 @@
       polygon(faceCoords[p], width, height, color, konteksti);
     }
   }
+  function loadFile() {}
   return {
     startscene: startscene,
+    loadFile: loadFile,
     loadPlaneImages: loadPlaneImages,
     next: next,
     previous: previous,
